@@ -1,0 +1,12 @@
+{
+  "id": "supplier-b",
+  "name": "LaptopHub",
+  "url": "http://localhost:3002",
+  "fields": {
+    "product": "Item Name",
+    "quantity": "Required Units",
+    "delivery_location": "Shipping Location",
+    "delivery_days": "Lead Time",
+    "warranty_years": "Warranty Period"
+  }
+}
