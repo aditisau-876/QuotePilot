@@ -1,0 +1,1 @@
+﻿await page.locator("#product").fill("Laptop"); await page.locator("#quantity").fill("10"); await page.locator("#delivery_location").fill("Mumbai"); await page.locator("#delivery_days").fill("7"); await page.locator("#warranty").fill("12"); console.log("FORM FILLED");
