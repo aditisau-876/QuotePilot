@@ -5,13 +5,13 @@ import { runWebcmd } from "./webcmd_runner.js";
 export async function loadSupplier(supplierId) {
   const filePath = path.join(
     process.cwd(),
+    "browser-agent",
     "suppliers",
     supplierId,
     "supplier.json"
   );
 
   const data = await fs.readFile(filePath, "utf8");
-
   return JSON.parse(data);
 }
 
@@ -23,21 +23,43 @@ export async function runSupplier(supplierId, requirements) {
   console.log(`URL: ${supplier.url}`);
   console.log("================================");
 
-  /*
-   * IMPORTANT:
-   *
-   * We do not hard-code a fake Webcmd subcommand here.
-   * The exact browser command/workflow syntax should come
-   * from the installed Webcmd version and its current docs.
-   *
-   * Once `webcmd --help` and the browser workflow are verified,
-   * we will put the exact arguments here.
-   */
+  const script = `
+await page.goto(${JSON.stringify(supplier.url)});
+
+await page.locator("#product").fill(${JSON.stringify(requirements.product)});
+await page.locator("#quantity").fill(String(${JSON.stringify(requirements.quantity)}));
+await page.locator("#delivery_location").fill(${JSON.stringify(requirements.delivery_location)});
+await page.locator("#delivery_days").fill(String(${JSON.stringify(requirements.max_delivery_days)}));
+await page.locator("#warranty").fill(String(${JSON.stringify(requirements.min_warranty_years * 12)}));
+
+await page.getByRole("button", { name: "Get Quote" }).click();
+
+await page.waitForTimeout(500);
+
+const response = await page.locator("body").innerText();
+
+console.log(JSON.stringify({
+  supplier_id: ${JSON.stringify(supplier.id)},
+  supplier: ${JSON.stringify(supplier.name)},
+  request: ${JSON.stringify(requirements)},
+  response
+}, null, 2));
+`;
+
+  const result = await runWebcmd([
+    "--session",
+    process.env.WEBCMD_SESSION,
+    "browser",
+    "run",
+    "--stdin",
+    "--timeout",
+    "30"
+  ], script);
 
   return {
     supplier_id: supplier.id,
     supplier_name: supplier.name,
-    status: "ready",
-    requirements
+    status: "completed",
+    result
   };
 }

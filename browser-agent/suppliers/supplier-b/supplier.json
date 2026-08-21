@@ -1,12 +1,12 @@
 {
   "id": "supplier-b",
-  "name": "LaptopHub",
+  "name": "GlobalTech Traders",
   "url": "http://localhost:3002",
   "fields": {
-    "product": "Item Name",
-    "quantity": "Required Units",
-    "delivery_location": "Shipping Location",
-    "delivery_days": "Lead Time",
-    "warranty_years": "Warranty Period"
+    "product": "Product",
+    "quantity": "Quantity",
+    "delivery_location": "Delivery Location",
+    "delivery_days": "Required Delivery",
+    "warranty_years": "Warranty"
   }
 }

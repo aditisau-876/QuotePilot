@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-export function runWebcmd(args = []) {
+export function runWebcmd(args = [], input = "") {
   return new Promise((resolve, reject) => {
     console.log("\n[Webcmd] Starting...");
     console.log("[Webcmd] Arguments:", args);
@@ -9,10 +9,14 @@ export function runWebcmd(args = []) {
       ? "webcmd.cmd"
       : "webcmd";
 
-    const child = spawn(command, args, {
-      shell: false,
-      stdio: ["pipe", "pipe", "pipe"]
-    });
+    const child = spawn(
+      command,
+      args,
+      {
+        shell: process.platform === "win32",
+        stdio: ["pipe", "pipe", "pipe"]
+      }
+    );
 
     let stdout = "";
     let stderr = "";
@@ -50,5 +54,11 @@ export function runWebcmd(args = []) {
         );
       }
     });
+
+    if (input) {
+      child.stdin.write(input);
+    }
+
+    child.stdin.end();
   });
 }

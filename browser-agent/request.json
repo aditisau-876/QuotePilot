@@ -1,0 +1,7 @@
+{
+  "product": "Laptop",
+  "quantity": 100,
+  "delivery_location": "Kolkata",
+  "max_delivery_days": 7,
+  "min_warranty_years": 2
+}

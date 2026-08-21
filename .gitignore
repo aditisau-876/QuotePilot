@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-node_modules/
-.env
-.env.*
-!.env.example
-dist/
-build/
-.vscode/
-=======
 # Python
 __pycache__/
 *.py[cod]
@@ -35,4 +26,3 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
->>>>>>> origin/tiyasa
