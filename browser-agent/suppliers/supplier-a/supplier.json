@@ -1,0 +1,12 @@
+{
+  "id": "supplier-a",
+  "name": "TechSource Supplies",
+  "url": "http://localhost:3001",
+  "fields": {
+    "product": "Product",
+    "quantity": "Quantity",
+    "delivery_location": "Delivery Location",
+    "delivery_days": "Required Delivery",
+    "warranty_years": "Warranty"
+  }
+}
