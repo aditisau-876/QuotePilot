@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
 
+from pydantic import BaseModel, Field, field_validator
 
 class ProcurementRequirements(BaseModel):
     product: str = Field(
@@ -45,3 +46,37 @@ class ProcurementRequirements(BaseModel):
         if value is not None and value < 0:
             raise ValueError("Warranty cannot be negative.")
         return value
+
+
+class FieldMappingResult(BaseModel):
+    field_name: str
+    concept: Literal[
+        "product",
+        "quantity",
+        "delivery_location",
+        "delivery",
+        "warranty",
+    ] | None
+
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence that the field maps to the selected concept."
+    )
+
+    reasoning: str
+
+    @field_validator("reasoning")
+    @classmethod
+    def validate_reasoning(cls, value: str) -> str:
+        return value.strip()
+
+
+
+class AgentResult(BaseModel):
+    success: bool
+    state: str
+    supplier_id: str
+    message: str
+    requirements: ProcurementRequirements | None = None
+    mappings: dict[str, str] | None = None

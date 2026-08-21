@@ -1,0 +1,22 @@
+{
+  "supplier_demo": {
+    "version": 2,
+    "mappings": {
+      "product": "Item Name",
+      "quantity": "How many pieces are needed?",
+      "delivery_location": "Shipping Destination",
+      "delivery": "Lead Time",
+      "warranty": "Warranty Period"
+    }
+  },
+  "supplier_orchestrator_demo": {
+    "version": 2,
+    "mappings": {
+      "product": "Product Description",
+      "quantity": "How many pieces are required?",
+      "delivery_location": "Destination",
+      "delivery": "Expected Arrival",
+      "warranty": "Coverage Duration"
+    }
+  }
+}
