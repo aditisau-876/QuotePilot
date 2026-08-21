@@ -1,0 +1,12 @@
+{
+  "id": "supplier-c",
+  "name": "PrimeOffice Systems",
+  "url": "http://localhost:3003",
+  "fields": {
+    "product": "Product",
+    "quantity": "Quantity",
+    "delivery_location": "Delivery Location",
+    "delivery_days": "Required Delivery",
+    "warranty_years": "Warranty"
+  }
+}
