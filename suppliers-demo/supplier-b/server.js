@@ -46,7 +46,7 @@ app.post("/quote", (req, res) => {
       <h1>Quote Generated</h1>
       <p>Product: <strong>${req.body.product}</strong></p>
       <p>Quantity: <strong>${quantity}</strong></p>
-      <p>Total Price: <strong>?${totalPrice.toLocaleString("en-IN")}</strong></p>
+      <p>Total Price: <strong>₹${totalPrice.toLocaleString("en-IN")}</strong></p>
       <p>Delivery: <strong>6 days</strong></p>
       <p>Warranty: <strong>3 years</strong></p>
       <p>Quote ID: <strong>GT-2048</strong></p>

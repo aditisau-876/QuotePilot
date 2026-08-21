@@ -1,24 +1,34 @@
 import { runWebcmd } from "./webcmd_runner.js";
 
+function extractDomain(url) {
+  try {
+    const withoutProtocol = String(url).replace(
+      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//,
+      ""
+    );
+
+    return withoutProtocol.split("/")[0].split(":")[0];
+  } catch {
+    return "";
+  }
+}
+
 export class BrowserAdapter {
-  constructor({ session, url }) {
-    if (!session) {
-      throw new Error("BrowserAdapter requires a Webcmd session");
-    }
+  constructor(sessionId) {
+    this.sessionId = sessionId;
 
-    if (!url) {
-      throw new Error("BrowserAdapter requires a URL");
+    if (!this.sessionId) {
+      throw new Error(
+        "WEBCMD_SESSION is required for BrowserAdapter"
+      );
     }
-
-    this.session = session;
-    this.url = url;
   }
 
   async run(script) {
-    return runWebcmd(
+    return await runWebcmd(
       [
         "--session",
-        this.session,
+        this.sessionId,
         "browser",
         "run",
         "--stdin",
@@ -29,228 +39,118 @@ export class BrowserAdapter {
     );
   }
 
+  async goto(url) {
+    const script = `
+await page.goto(${JSON.stringify(url)});
+
+const currentUrl = page.url();
+
+console.log(JSON.stringify({
+  success: true,
+  action: "goto",
+  url: currentUrl
+}));
+`;
+
+    return this.run(script);
+  }
+
   async inspect() {
     const script = `
-const page = await browser.newPage();
+const currentUrl = page.url();
+const bodyText = await page.locator("body").innerText();
 
-await page.goto(${JSON.stringify(this.url)});
-
-const fields = await page.locator(
-  "input, textarea, select, button"
-).evaluateAll(elements =>
-  elements.map((el, index) => ({
-    index,
-    tag: el.tagName.toLowerCase(),
-    type: el.getAttribute("type") || null,
-    name: el.getAttribute("name") || null,
-    id: el.id || null,
-    placeholder: el.getAttribute("placeholder") || null,
-    ariaLabel: el.getAttribute("aria-label") || null,
-    text: (el.innerText || "").trim(),
-    value: el.value ?? "",
-    required: el.hasAttribute("required")
-  }))
-);
+const domain = String(currentUrl)
+  .replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\\/\\//, "")
+  .split("/")[0]
+  .split(":")[0];
 
 console.log(JSON.stringify({
   success: true,
-  url: page.url(),
-  domain: new URL(page.url()).hostname,
-  fields
+  action: "inspect",
+  url: currentUrl,
+  domain,
+  text: bodyText
 }));
 `;
 
-    try {
-      const result = await this.run(script);
-      return this.parseResult(result);
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
+    return this.run(script);
   }
 
-  async fill(field, value) {
+  async fill(selector, value) {
     const script = `
-const page = await browser.newPage();
-
-await page.goto(${JSON.stringify(this.url)});
-
-const field = ${JSON.stringify(field)};
-const value = ${JSON.stringify(String(value))};
-
-let locator;
-
-if (field.startsWith("#") || field.startsWith(".") || field.includes("[")) {
-  locator = page.locator(field);
-} else {
-  locator = page.locator(
-    "#" + field
-  );
-
-  if (await locator.count() === 0) {
-    locator = page.locator(
-      '[name="' + field + '"]'
-    );
-  }
-
-  if (await locator.count() === 0) {
-    locator = page.getByLabel(field);
-  }
-}
-
-if (await locator.count() === 0) {
-  console.log(JSON.stringify({
-    success: false,
-    field,
-    error: "Field not found"
-  }));
-  process.exit(0);
-}
-
-await locator.first().fill(value);
-
-console.log(JSON.stringify({
-  success: true,
-  field,
-  value
-}));
-`;
-
-    try {
-      const result = await this.run(script);
-      return this.parseResult(result);
-    } catch (error) {
-      return {
-        success: false,
-        field,
-        error: error.message
-      };
-    }
-  }
-
-  async action(action) {
-    const script = `
-const page = await browser.newPage();
-
-await page.goto(${JSON.stringify(this.url)});
-
-const action = ${JSON.stringify(action)};
-
 try {
-  if (action.type === "click") {
-    let locator;
-
-    if (action.selector) {
-      locator = page.locator(action.selector);
-    } else if (action.text) {
-      locator = page.getByText(action.text, { exact: true });
-    } else if (action.role) {
-      locator = page.getByRole(
-        action.role,
-        action.name ? { name: action.name } : {}
-      );
-    } else {
-      throw new Error(
-        "Click action requires selector, text, or role"
-      );
-    }
-
-    if (await locator.count() === 0) {
-      throw new Error("Click target not found");
-    }
-
-    await locator.first().click();
-
-  } else if (action.type === "navigate") {
-    if (!action.url) {
-      throw new Error("Navigate action requires url");
-    }
-
-    await page.goto(action.url);
-
-  } else if (action.type === "submit") {
-    if (action.selector) {
-      await page.locator(action.selector).press("Enter");
-    } else {
-      await page.locator("form").first().press("Enter");
-    }
-
-  } else {
-    throw new Error(
-      "Unsupported action type: " + action.type
-    );
-  }
+  await page.locator(${JSON.stringify(selector)}).fill(
+    ${JSON.stringify(String(value))}
+  );
 
   console.log(JSON.stringify({
     success: true,
-    action,
-    url: page.url(),
-    domain: new URL(page.url()).hostname
+    action: "fill",
+    selector: ${JSON.stringify(selector)},
+    value: ${JSON.stringify(String(value))},
+    url: page.url()
   }));
-
 } catch (error) {
   console.log(JSON.stringify({
     success: false,
-    action,
+    action: "fill",
+    selector: ${JSON.stringify(selector)},
     error: error.message,
-    url: page.url(),
-    domain: new URL(page.url()).hostname
+    url: page.url()
   }));
+
+  process.exitCode = 1;
 }
 `;
 
-    try {
-      const result = await this.run(script);
-      return this.parseResult(result);
-    } catch (error) {
-      return {
-        success: false,
-        action,
-        error: error.message
-      };
-    }
+    return this.run(script);
   }
 
-  async currentPage() {
+  async click(selector) {
     const script = `
-const page = await browser.newPage();
+try {
+  await page.locator(${JSON.stringify(selector)}).click();
 
-await page.goto(${JSON.stringify(this.url)});
+  console.log(JSON.stringify({
+    success: true,
+    action: "click",
+    selector: ${JSON.stringify(selector)},
+    url: page.url()
+  }));
+} catch (error) {
+  console.log(JSON.stringify({
+    success: false,
+    action: "click",
+    selector: ${JSON.stringify(selector)},
+    error: error.message,
+    url: page.url()
+  }));
+
+  process.exitCode = 1;
+}
+`;
+
+    return this.run(script);
+  }
+
+  async getPageInfo() {
+    const script = `
+const currentUrl = page.url();
+
+const domain = String(currentUrl)
+  .replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\\/\\//, "")
+  .split("/")[0]
+  .split(":")[0];
 
 console.log(JSON.stringify({
   success: true,
-  url: page.url(),
-  domain: new URL(page.url()).hostname
+  url: currentUrl,
+  domain,
+  title: await page.title()
 }));
 `;
 
-    try {
-      const result = await this.run(script);
-      return this.parseResult(result);
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  parseResult(result) {
-    const outer = JSON.parse(result.stdout);
-
-    const log = outer.logs?.find(
-      item =>
-        item.level === "log" &&
-        Array.isArray(item.args) &&
-        typeof item.args[0] === "string"
-    );
-
-    if (!log) {
-      throw new Error("No adapter response returned by Webcmd");
-    }
-
-    return JSON.parse(log.args[0]);
+    return this.run(script);
   }
 }

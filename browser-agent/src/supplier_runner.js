@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { runWebcmd } from "./webcmd_runner.js";
+import { BrowserAdapter } from "./browser_adapter.js";
 
 export async function loadSupplier(supplierId) {
   const filePath = path.join(
@@ -12,10 +12,15 @@ export async function loadSupplier(supplierId) {
   );
 
   const data = await fs.readFile(filePath, "utf8");
+
   return JSON.parse(data);
 }
 
-export async function runSupplier(supplierId, requirements) {
+export async function runSupplier(
+  supplierId,
+  requirements,
+  browser = null
+) {
   const supplier = await loadSupplier(supplierId);
 
   console.log("\n================================");
@@ -23,43 +28,54 @@ export async function runSupplier(supplierId, requirements) {
   console.log(`URL: ${supplier.url}`);
   console.log("================================");
 
-  const script = `
-await page.goto(${JSON.stringify(supplier.url)});
+  const adapter =
+    browser ||
+    new BrowserAdapter(process.env.WEBCMD_SESSION);
 
-await page.locator("#product").fill(${JSON.stringify(requirements.product)});
-await page.locator("#quantity").fill(String(${JSON.stringify(requirements.quantity)}));
-await page.locator("#delivery_location").fill(${JSON.stringify(requirements.delivery_location)});
-await page.locator("#delivery_days").fill(String(${JSON.stringify(requirements.max_delivery_days)}));
-await page.locator("#warranty").fill(String(${JSON.stringify(requirements.min_warranty_years * 12)}));
+  await adapter.goto(supplier.url);
 
-await page.getByRole("button", { name: "Get Quote" }).click();
+  await adapter.fill(
+    "#product",
+    requirements.product
+  );
 
-await page.waitForTimeout(500);
+  await adapter.fill(
+    "#quantity",
+    requirements.quantity
+  );
 
-const response = await page.locator("body").innerText();
+  await adapter.fill(
+    "#delivery_location",
+    requirements.delivery_location
+  );
 
-console.log(JSON.stringify({
-  supplier_id: ${JSON.stringify(supplier.id)},
-  supplier: ${JSON.stringify(supplier.name)},
-  request: ${JSON.stringify(requirements)},
-  response
-}, null, 2));
-`;
+  await adapter.fill(
+    "#delivery_days",
+    requirements.max_delivery_days
+  );
 
-  const result = await runWebcmd([
-    "--session",
-    process.env.WEBCMD_SESSION,
-    "browser",
-    "run",
-    "--stdin",
-    "--timeout",
-    "30"
-  ], script);
+  await adapter.fill(
+    "#warranty",
+    requirements.min_warranty_years * 12
+  );
+
+  const clickResult = await adapter.click(
+    'button:has-text("Get Quote")'
+  );
+
+  const pageInfo = await adapter.getPageInfo();
+
+  const inspected = await adapter.inspect();
 
   return {
     supplier_id: supplier.id,
     supplier_name: supplier.name,
     status: "completed",
-    result
+
+    result: {
+      click: clickResult,
+      page: pageInfo,
+      inspection: inspected
+    }
   };
 }
